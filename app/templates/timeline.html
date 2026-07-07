@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Timeline — {{ evidence.original_filename }}</h2>
+<p class="mono">{{ sessions|length }} session(s), ordered chronologically by first packet.</p>
+
+<table>
+  <tr><th>Time</th><th>Src</th><th>Dst</th><th>Proto / App</th><th>What happened</th></tr>
+  {% for s in sessions %}
+  <tr>
+    <td class="mono">{{ s.start_time.strftime('%H:%M:%S') }}</td>
+    <td>{{ s.src_ip }}:{{ s.src_port }}</td>
+    <td>{{ s.dst_ip }}:{{ s.dst_port }}</td>
+    <td>{{ s.protocol }}{% if s.app_protocol %} / {{ s.app_protocol }}{% endif %}</td>
+    <td>{{ s.summary or (s.packet_count ~ ' packets, ' ~ s.byte_count ~ ' bytes') }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endblock %}

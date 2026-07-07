@@ -1,0 +1,10 @@
+venv/
+__pycache__/
+*.pyc
+instance/
+app/instance/
+app/uploads/
+app/extracted/
+app/reports/
+*.db
+.env

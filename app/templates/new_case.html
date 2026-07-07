@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>New Case</h2>
+<div class="card">
+  <form method="post">
+    <label>Case Name</label>
+    <input name="name" required placeholder="e.g. Acme Corp Breach - July 2026">
+    <label>Description</label>
+    <textarea name="description" rows="3" placeholder="Brief summary of the incident"></textarea>
+    <label>Lead Investigator</label>
+    <input name="investigator" placeholder="Your name">
+    <label>Suspect(s)</label>
+    <textarea name="suspect" rows="2" placeholder="Name, alias, or description of person(s) suspected (if known)"></textarea>
+    <label>Affected Party / Victim(s)</label>
+    <textarea name="affected_party" rows="2" placeholder="Person, organization, or system affected by the incident"></textarea>
+    <button class="btn" type="submit">Create Case</button>
+  </form>
+</div>
+{% endblock %}

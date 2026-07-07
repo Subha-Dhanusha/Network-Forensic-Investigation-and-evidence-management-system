@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:flex-start;">
+  <h2>{{ case.name }}</h2>
+  <div style="display:flex; gap:8px;">
+    <a class="btn-outline" href="{{ url_for('main.edit_case', case_id=case.id) }}">Edit Case</a>
+    <form method="post" action="{{ url_for('main.delete_case', case_id=case.id) }}" onsubmit="return confirm('Permanently delete \'{{ case.name }}\' and all {{ case.evidence_items|length }} evidence item(s) inside it? This cannot be undone.');">
+      <button class="btn-danger" type="submit">Delete Case</button>
+    </form>
+  </div>
+</div>
+<p class="mono">Investigator: {{ case.investigator or 'unassigned' }} · Status: {{ case.status }}</p>
+<p>{{ case.description }}</p>
+<p class="mono">Suspect(s): {{ case.suspect or 'unknown' }}</p>
+<p class="mono">Affected Party: {{ case.affected_party or 'not specified' }}</p>
+
+<div class="card">
+  <h3 style="margin-top:0;">Upload PCAP Evidence</h3>
+  <form method="post" action="{{ url_for('main.upload_evidence', case_id=case.id) }}" enctype="multipart/form-data">
+    <label>PCAP File (.pcap, .pcapng, .cap)</label>
+    <input type="file" name="pcap_file" accept=".pcap,.pcapng,.cap" required>
+    <label>Uploaded by</label>
+    <input name="investigator" placeholder="Your name" value="{{ case.investigator or '' }}">
+    <button class="btn" type="submit">Upload & Hash</button>
+  </form>
+</div>
+
+<h3>Evidence Items</h3>
+{% for ev in case.evidence_items %}
+  <div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <a href="{{ url_for('main.view_evidence', evidence_id=ev.id) }}" style="color:var(--primary-2); text-decoration:none;"><strong>{{ ev.original_filename }}</strong></a>
+      <form method="post" action="{{ url_for('main.delete_evidence', evidence_id=ev.id) }}" onsubmit="return confirm('Permanently delete evidence \'{{ ev.original_filename }}\'? This removes the file, all extracted sessions/alerts, and its chain-of-custody log. This cannot be undone.');">
+        <button type="submit" title="Delete evidence" style="background:none; border:none; cursor:pointer; padding:4px 8px; border-radius:5px; color:var(--text-muted); font-size:14px;" onmouseover="this.style.background='rgba(239,68,68,0.1)'; this.style.color='var(--critical)';" onmouseout="this.style.background='transparent'; this.style.color='var(--text-muted)';">🗑️</button>
+      </form>
+    </div>
+    <p class="mono">SHA-256: {{ ev.sha256 }}</p>
+    <p class="mono">{{ ev.file_size }} bytes · uploaded {{ ev.uploaded_at.strftime('%Y-%m-%d %H:%M UTC') }} · status: {{ ev.analysis_status }}</p>
+  </div>
+{% else %}
+  <p>No evidence uploaded yet.</p>
+{% endfor %}
+{% endblock %}

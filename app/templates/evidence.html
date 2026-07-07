@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>{{ evidence.original_filename }}</h2>
+<div class="card">
+  <table>
+    <tr><th>SHA-256</th><td class="mono">{{ evidence.sha256 }}</td></tr>
+    <tr><th>MD5</th><td class="mono">{{ evidence.md5 }}</td></tr>
+    <tr><th>Size</th><td>{{ evidence.file_size }} bytes</td></tr>
+    <tr><th>Uploaded</th><td>{{ evidence.uploaded_at.strftime('%Y-%m-%d %H:%M UTC') }} by {{ evidence.uploaded_by }}</td></tr>
+    <tr><th>Analysis Status</th><td><span class="badge pending">{{ evidence.analysis_status }}</span></td></tr>
+  </table>
+</div>
+
+<div class="card" style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
+  <button class="btn-outline" onclick="verifyNow()">Verify Integrity Now</button>
+  <a class="btn-outline" href="{{ url_for('main.view_custody_log', evidence_id=evidence.id) }}">View Chain of Custody</a>
+  <form method="post" action="{{ url_for('main.analyze_evidence', evidence_id=evidence.id) }}">
+    <button class="btn" type="submit">{% if evidence.analysis_status == 'completed' %}Re-run Analysis{% else %}Run Analysis{% endif %}</button>
+  </form>
+  <a class="btn-outline" href="{{ url_for('main.view_timeline', evidence_id=evidence.id) }}">View Timeline</a>
+  <form method="post" action="{{ url_for('main.detect_patterns', evidence_id=evidence.id) }}">
+    <button class="btn-danger" type="submit">Detect Suspicious Patterns</button>
+  </form>
+  <a class="btn-outline" href="{{ url_for('main.export_iocs', evidence_id=evidence.id) }}">Export IOCs</a>
+  <a class="btn-outline" href="{{ url_for('main.generate_report', evidence_id=evidence.id) }}">Download PDF Report</a>
+  <form method="post" action="{{ url_for('main.extract_files', evidence_id=evidence.id) }}">
+    <button class="btn-outline" type="submit">Extract Files</button>
+  </form>
+  {% if evidence.analysis_status != 'completed' %}
+  <p style="width:100%; font-size:12px; color:var(--text-muted); margin:2px 0 0;">
+    Tip: Detect Patterns and Extract Files need "Run Analysis" done first — clicking them early will just tell you that.
+  </p>
+  {% endif %}
+  <p id="verify-result" class="mono" style="width:100%; margin-top:4px;"></p>
+</div>
+
+{% if evidence.analysis_status == 'completed' %}
+<div class="card">
+  <p class="mono">
+    {{ evidence.packet_count }} packets ·
+    {% if evidence.capture_start %}{{ evidence.capture_start.strftime('%Y-%m-%d %H:%M:%S') }} → {{ evidence.capture_end.strftime('%H:%M:%S') }} UTC{% endif %}
+    · {{ evidence.sessions|length }} sessions
+  </p>
+</div>
+{% elif evidence.analysis_status == 'failed' %}
+<div class="flash error">Analysis failed: {{ evidence.analysis_error }}</div>
+{% endif %}
+
+<h3>Sessions ({{ evidence.sessions|length }})</h3>
+{% if evidence.sessions %}
+<table>
+  <tr><th>Src</th><th>Dst</th><th>Proto</th><th>App</th><th>Packets</th><th>Bytes</th><th>Notes</th></tr>
+  {% for s in evidence.sessions|sort(attribute='byte_count', reverse=True) %}
+  <tr>
+    <td>{{ s.src_ip }}:{{ s.src_port }}</td>
+    <td>{{ s.dst_ip }}:{{ s.dst_port }}</td>
+    <td>{{ s.protocol }}</td>
+    <td>{{ s.app_protocol or '—' }}</td>
+    <td>{{ s.packet_count }}</td>
+    <td>{{ s.byte_count }}</td>
+    <td>{{ s.summary or '' }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}
+<p>No sessions extracted yet. Click "Run Analysis" above.</p>
+{% endif %}
+
+<h3>Extracted Files ({{ evidence.extracted_files|length }})</h3>
+{% if evidence.extracted_files %}
+<table>
+  <tr><th>Filename</th><th>Size</th><th>SHA-256</th><th>Direction</th><th>VirusTotal</th></tr>
+  {% for f in evidence.extracted_files %}
+  <tr>
+    <td>{{ f.filename }}</td>
+    <td>{{ f.file_size }} bytes</td>
+    <td class="mono">{{ f.sha256[:16] }}...</td>
+    <td>{{ f.direction }}</td>
+    <td>
+      {% if f.vt_checked %}
+        {% if f.vt_total_engines %}
+          <span class="badge {% if f.vt_malicious_count %}invalid{% else %}valid{% endif %}">
+            {{ f.vt_malicious_count }}/{{ f.vt_total_engines }} flagged
+          </span>
+          <a href="{{ f.vt_report_url }}" target="_blank" style="color:var(--primary-2); font-size:12px;">view report</a>
+        {% else %}
+          <span class="badge pending">not in VT database</span>
+        {% endif %}
+      {% else %}
+        <form method="post" action="{{ url_for('main.vt_check_file', file_id=f.id) }}" style="display:inline;">
+          <button class="btn" style="padding:4px 10px; font-size:12px;" type="submit">Check VirusTotal</button>
+        </form>
+      {% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}
+<p>No files extracted yet. {% if evidence.analysis_status == 'completed' %}Click "Extract Files" above.{% endif %}</p>
+{% endif %}
+<h3>Alerts ({{ evidence.alerts|length }})</h3>
+{% if evidence.alerts %}
+{% for a in evidence.alerts|sort(attribute='severity') %}
+  <div class="card" style="border-left: 4px solid {% if a.severity == 'critical' %}var(--critical){% elif a.severity == 'high' %}var(--warn){% elif a.severity == 'medium' %}#a89550{% else %}var(--text-muted){% endif %};">
+    <strong>{{ a.title }}</strong>
+    <span class="badge {% if a.severity in ['critical','high'] %}invalid{% else %}pending{% endif %}">{{ a.severity }}</span>
+    <p style="font-size:13px; color:var(--text-muted); margin-top:8px;">{{ a.description }}</p>
+  </div>
+{% endfor %}
+{% else %}
+<p>No alerts. {% if evidence.analysis_status == 'completed' %}Click "Detect Suspicious Patterns" above.{% endif %}</p>
+{% endif %}
+<script>
+async function verifyNow() {
+  const res = await fetch("{{ url_for('main.verify_integrity', evidence_id=evidence.id) }}");
+  const data = await res.json();
+  document.getElementById('verify-result').innerText =
+    data.valid ? "✅ Integrity verified — hash matches original." : "⚠️ MISMATCH — evidence may have been altered!";
+}
+</script>
+{% endblock %}

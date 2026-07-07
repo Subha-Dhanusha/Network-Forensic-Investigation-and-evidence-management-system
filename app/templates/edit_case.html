@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Edit Case</h2>
+<div class="card">
+  <form method="post">
+    <label>Case Name</label>
+    <input name="name" required value="{{ case.name }}">
+    <label>Description</label>
+    <textarea name="description" rows="3">{{ case.description or '' }}</textarea>
+    <label>Lead Investigator</label>
+    <input name="investigator" value="{{ case.investigator or '' }}">
+    <label>Suspect(s)</label>
+    <textarea name="suspect" rows="2" placeholder="Name, alias, or description of person(s) suspected (if known)">{{ case.suspect or '' }}</textarea>
+    <label>Affected Party / Victim(s)</label>
+    <textarea name="affected_party" rows="2" placeholder="Person, organization, or system affected by the incident">{{ case.affected_party or '' }}</textarea>
+    <label>Status</label>
+    <select name="status">
+      <option value="open" {% if case.status == 'open' %}selected{% endif %}>Open</option>
+      <option value="closed" {% if case.status == 'closed' %}selected{% endif %}>Closed</option>
+      <option value="archived" {% if case.status == 'archived' %}selected{% endif %}>Archived</option>
+    </select>
+    <div style="display:flex; gap:8px;">
+      <button class="btn" type="submit">Save Changes</button>
+      <a class="btn-outline" href="{{ url_for('main.view_case', case_id=case.id) }}">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

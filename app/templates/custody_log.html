@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Chain of Custody — {{ evidence.original_filename }}</h2>
+
+<div class="card">
+  {% if is_valid %}
+    <span class="badge valid">✅ Chain intact — no tampering detected</span>
+  {% else %}
+    <span class="badge invalid">⚠️ CHAIN BROKEN at entry #{{ broken_at }} — possible tampering</span>
+  {% endif %}
+</div>
+
+<table>
+  <tr><th>#</th><th>Timestamp</th><th>Action</th><th>Actor</th><th>Details</th><th>Entry Hash</th></tr>
+  {% for log in logs %}
+  <tr>
+    <td>{{ log.id }}</td>
+    <td>{{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S UTC') }}</td>
+    <td>{{ log.action }}</td>
+    <td>{{ log.actor }}</td>
+    <td>{{ log.details }}</td>
+    <td class="mono">{{ log.entry_hash[:16] }}...</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endblock %}

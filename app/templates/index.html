@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Dashboard</h2>
+
+<div class="stat-grid">
+  <div class="stat-card">
+    <div class="stat-number">{{ stats.total_cases }}</div>
+    <div class="stat-label">Cases</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-number">{{ stats.total_evidence }}</div>
+    <div class="stat-label">Evidence Files</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-number">{{ "{:,}".format(stats.total_packets) }}</div>
+    <div class="stat-label">Packets Analyzed</div>
+  </div>
+  <div class="stat-card {% if stats.critical_alerts > 0 %}critical{% elif stats.high_alerts > 0 %}warn{% endif %}">
+    <div class="stat-number">{{ stats.total_alerts }}</div>
+    <div class="stat-label">Alerts Triggered</div>
+  </div>
+</div>
+
+<h3>Cases</h3>
+{% for case in cases %}
+  <div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+      <h2 style="margin-bottom:4px; font-size:16px;"><a href="{{ url_for('main.view_case', case_id=case.id) }}" style="color:var(--primary-2); text-decoration:none;">{{ case.name }}</a></h2>
+      <div style="display:flex; gap:4px; flex-shrink:0;">
+        <a href="{{ url_for('main.edit_case', case_id=case.id) }}" title="Edit case" style="text-decoration:none; padding:4px 8px; border-radius:8px; color:var(--text-muted); font-size:14px;" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='transparent'">✏️</a>
+        <form method="post" action="{{ url_for('main.delete_case', case_id=case.id) }}" onsubmit="return confirm('Permanently delete \'{{ case.name }}\' and all {{ case.evidence_items|length }} evidence item(s) inside it? This cannot be undone.');" style="display:inline;">
+          <button type="submit" title="Delete case" style="background:none; border:none; cursor:pointer; padding:4px 8px; border-radius:8px; color:var(--text-muted); font-size:14px;" onmouseover="this.style.background='rgba(251,69,112,0.12)'; this.style.color='var(--critical)';" onmouseout="this.style.background='transparent'; this.style.color='var(--text-muted)';">🗑️</button>
+        </form>
+      </div>
+    </div>
+    <p style="margin:4px 0; font-size:13.5px; color:var(--text-muted);">{{ case.description }}</p>
+    <p class="mono">Investigator: {{ case.investigator or 'unassigned' }} · Status: {{ case.status }} · Opened {{ case.created_at.strftime('%Y-%m-%d') }} · {{ case.evidence_items|length }} evidence item(s)</p>
+  </div>
+{% else %}
+  <div class="card">
+    <p style="color:var(--text-muted); margin:0;">No cases yet. Click "+ New Case" above to start your first investigation.</p>
+  </div>
+{% endfor %}
+{% endblock %}
