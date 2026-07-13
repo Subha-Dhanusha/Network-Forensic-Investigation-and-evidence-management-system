@@ -7,6 +7,15 @@
     <input name="name" required placeholder="e.g. Acme Corp Breach - July 2026">
     <label>Description</label>
     <textarea name="description" rows="3" placeholder="Brief summary of the incident"></textarea>
+    <label>Incident Type</label>
+    <select name="incident_type">
+      <option value="phishing">Phishing</option>
+      <option value="malware_c2">Malware / C2</option>
+      <option value="data_breach">Data Breach / Exfiltration</option>
+      <option value="unauthorized_access">Unauthorized Access</option>
+      <option value="dos">Denial of Service</option>
+      <option value="other" selected>Other</option>
+    </select>
     <label>Lead Investigator</label>
     <input name="investigator" placeholder="Your name">
     <label>Suspect(s)</label>

@@ -1,5 +1,12 @@
 {% extends "base.html" %}
 {% block content %}
+<style>
+  .alert-critical { border-left: 4px solid var(--critical); }
+  .alert-high { border-left: 4px solid var(--warn); }
+  .alert-medium { border-left: 4px solid #a89550; }
+  .alert-low { border-left: 4px solid var(--text-muted); }
+</style>
+
 <h2>{{ evidence.original_filename }}</h2>
 <div class="card">
   <table>
@@ -7,7 +14,11 @@
     <tr><th>MD5</th><td class="mono">{{ evidence.md5 }}</td></tr>
     <tr><th>Size</th><td>{{ evidence.file_size }} bytes</td></tr>
     <tr><th>Uploaded</th><td>{{ evidence.uploaded_at.strftime('%Y-%m-%d %H:%M UTC') }} by {{ evidence.uploaded_by }}</td></tr>
-    <tr><th>Analysis Status</th><td><span class="badge pending">{{ evidence.analysis_status }}</span></td></tr>
+    <tr><th>Analysis Status</th><td>
+      <span class="badge {% if evidence.analysis_status == 'completed' %}valid{% elif evidence.analysis_status == 'failed' %}invalid{% else %}pending{% endif %}">
+        {{ evidence.analysis_status }}
+      </span>
+    </td></tr>
   </table>
 </div>
 
@@ -38,7 +49,11 @@
 <div class="card">
   <p class="mono">
     {{ evidence.packet_count }} packets ·
-    {% if evidence.capture_start %}{{ evidence.capture_start.strftime('%Y-%m-%d %H:%M:%S') }} → {{ evidence.capture_end.strftime('%H:%M:%S') }} UTC{% endif %}
+    {% if evidence.capture_start and evidence.capture_end %}
+      {{ evidence.capture_start.strftime('%Y-%m-%d %H:%M:%S') }} → {{ evidence.capture_end.strftime('%H:%M:%S') }} UTC
+    {% elif evidence.capture_start %}
+      {{ evidence.capture_start.strftime('%Y-%m-%d %H:%M:%S') }} UTC (no end time recorded)
+    {% endif %}
     · {{ evidence.sessions|length }} sessions
   </p>
 </div>
@@ -98,10 +113,15 @@
 {% else %}
 <p>No files extracted yet. {% if evidence.analysis_status == 'completed' %}Click "Extract Files" above.{% endif %}</p>
 {% endif %}
+
 <h3>Alerts ({{ evidence.alerts|length }})</h3>
 {% if evidence.alerts %}
 {% for a in evidence.alerts|sort(attribute='severity') %}
-  <div class="card" style="border-left: 4px solid {% if a.severity == 'critical' %}var(--critical){% elif a.severity == 'high' %}var(--warn){% elif a.severity == 'medium' %}#a89550{% else %}var(--text-muted){% endif %};">
+  {% set severity_class = 'alert-critical' if a.severity == 'critical'
+     else 'alert-high' if a.severity == 'high'
+     else 'alert-medium' if a.severity == 'medium'
+     else 'alert-low' %}
+  <div class="card {{ severity_class }}">
     <strong>{{ a.title }}</strong>
     <span class="badge {% if a.severity in ['critical','high'] %}invalid{% else %}pending{% endif %}">{{ a.severity }}</span>
     <p style="font-size:13px; color:var(--text-muted); margin-top:8px;">{{ a.description }}</p>
@@ -110,6 +130,7 @@
 {% else %}
 <p>No alerts. {% if evidence.analysis_status == 'completed' %}Click "Detect Suspicious Patterns" above.{% endif %}</p>
 {% endif %}
+
 <script>
 async function verifyNow() {
   const res = await fetch("{{ url_for('main.verify_integrity', evidence_id=evidence.id) }}");

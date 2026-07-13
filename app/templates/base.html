@@ -74,6 +74,29 @@
     }
     .navlinks a.primary:hover { filter: brightness(1.1); }
 
+    .nav-user-badge { font-size: 12px; color: var(--text-muted); margin-right: 2px; align-self: center; }
+    .nav-dropdown { position: relative; }
+    .nav-dropdown-toggle {
+      background: var(--surface-2); border: 1px solid var(--border); color: var(--text);
+      font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer;
+      padding: 8px 16px; border-radius: 999px; transition: border-color 0.15s;
+    }
+    .nav-dropdown-toggle:hover { border-color: var(--primary-2); }
+    .nav-dropdown-toggle.primary { background: var(--gradient); color: #0b0a1a; border: none; font-weight: 700; }
+    .nav-dropdown-toggle.primary:hover { filter: brightness(1.1); }
+    .nav-dropdown-menu {
+      display: none; position: absolute; top: calc(100% + 6px); right: 0; min-width: 170px;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.35); z-index: 50; padding: 6px;
+    }
+    .nav-dropdown-menu.open { display: block; }
+    .nav-dropdown-menu a, .nav-dropdown-logout {
+      display: block; width: 100%; text-align: left; padding: 8px 12px; border-radius: 6px;
+      font-size: 13px; color: var(--text); text-decoration: none; background: none; border: none;
+      font-family: var(--sans); cursor: pointer;
+    }
+    .nav-dropdown-menu a:hover, .nav-dropdown-logout:hover { background: var(--surface-2); color: var(--primary-2); }
+
     main { max-width: 1000px; margin: 0 auto; padding: 32px 24px 64px; }
 
     h2, h3 { font-family: var(--display); font-weight: 700; letter-spacing: -0.01em; }
@@ -164,8 +187,39 @@
       <span class="brand-sub">Network Forensic Investigation &amp; Evidence Management System</span>
     </a>
     <div class="navlinks">
-      <a href="{{ url_for('main.index') }}">Dashboard</a>
-      <a href="{{ url_for('main.new_case') }}" class="primary">+ New Case</a>
+      {% if current_user.is_authenticated %}
+        <a href="{{ url_for('main.index') }}">Dashboard</a>
+        <a href="{{ url_for('main.new_case') }}" class="primary">+ New Case</a>
+        <span class="nav-user-badge">
+          {{ current_user.username }}{% if current_user.role == 'investigator' and current_user.investigator_id %} ({{ current_user.investigator_id }}){% endif %}
+        </span>
+        <div class="nav-dropdown">
+          <button class="nav-dropdown-toggle" onclick="this.nextElementSibling.classList.toggle('open')">Account ▾</button>
+          <div class="nav-dropdown-menu">
+            {% if current_user.is_admin %}
+              <a href="{{ url_for('auth.manage_users') }}">Manage Users</a>
+            {% endif %}
+            <form method="post" action="{{ url_for('auth.logout') }}" style="margin:0;">
+              <button type="submit" class="nav-dropdown-logout">Logout</button>
+            </form>
+          </div>
+        </div>
+      {% else %}
+        <div class="nav-dropdown">
+          <button class="nav-dropdown-toggle" onclick="this.nextElementSibling.classList.toggle('open')">Login ▾</button>
+          <div class="nav-dropdown-menu">
+            <a href="{{ url_for('auth.login_admin') }}">Admin</a>
+            <a href="{{ url_for('auth.login_investigator') }}">Investigator</a>
+          </div>
+        </div>
+        <div class="nav-dropdown">
+          <button class="nav-dropdown-toggle primary" onclick="this.nextElementSibling.classList.toggle('open')">Register ▾</button>
+          <div class="nav-dropdown-menu">
+            <a href="{{ url_for('auth.register_admin') }}">Admin</a>
+            <a href="{{ url_for('auth.register_investigator') }}">Investigator</a>
+          </div>
+        </div>
+      {% endif %}
     </div>
   </nav>
   <main>
@@ -176,5 +230,13 @@
     {% endwith %}
     {% block content %}{% endblock %}
   </main>
+
+  <script>
+    document.addEventListener('click', function (e) {
+      document.querySelectorAll('.nav-dropdown-menu.open').forEach(function (menu) {
+        if (!menu.parentElement.contains(e.target)) menu.classList.remove('open');
+      });
+    });
+  </script>
 </body>
 </html>

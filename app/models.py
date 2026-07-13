@@ -5,6 +5,8 @@ import hashlib
 import json
 from datetime import datetime, timezone
 from flask_sqlalchemy import SQLAlchemy
+from flask_login import UserMixin
+from werkzeug.security import generate_password_hash, check_password_hash
 
 db = SQLAlchemy()
 
@@ -198,4 +200,30 @@ class CustodyLog(db.Model):
                 return False, entry.id
             expected_prev = entry.entry_hash
         return True, None
-        
+
+
+class User(UserMixin, db.Model):
+    __tablename__ = "users"
+
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), unique=True, nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=True)  # nullable for now — tighten after backfill
+    password_hash = db.Column(db.String(255), nullable=False)
+    role = db.Column(db.String(20), nullable=False, default="investigator")  # "admin" or "investigator"
+    investigator_id = db.Column(db.String(20), unique=True, nullable=True)   # e.g. INV-00001, admins have None
+    is_active_user = db.Column(db.Boolean, default=True, nullable=False, server_default="1")
+    created_at = db.Column(db.DateTime, default=utcnow)
+    last_login_at = db.Column(db.DateTime, nullable=True)
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
+    @property
+    def is_admin(self):
+        return self.role == "admin"
+
+    def __repr__(self):
+        return f"<User {self.username} ({self.role})>"

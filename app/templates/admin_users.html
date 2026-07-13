@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  .role-admin { color: var(--critical); font-weight: 600; }
+  .role-investigator { color: var(--primary-2); font-weight: 600; }
+  .user-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+  .user-actions form { display: inline; }
+  .user-actions .btn,
+  .user-actions .btn-outline,
+  .user-actions .btn-danger {
+    padding: 4px 10px;
+    font-size: 12px;
+  }
+  .new-user-card { margin-top: 20px; }
+</style>
+
+<h2 style="margin:0 0 16px;">User Management</h2>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for category, message in messages %}
+      <div class="flash {{ category }}">{{ message }}</div>
+    {% endfor %}
+  {% endif %}
+{% endwith %}
+
+<div class="card">
+  <p class="mono" style="margin:0;">{{ users|length }} user{{ '' if users|length == 1 else 's' }} total</p>
+</div>
+
+{% if users %}
+<table>
+  <tr>
+    <th>Username</th>
+    <th>Email</th>
+    <th>Role</th>
+    <th>Investigator ID</th>
+    <th>Status</th>
+    <th>Last Login</th>
+    <th>Actions</th>
+  </tr>
+  {% for u in users %}
+  {% set role_class = 'role-admin' if u.role == 'admin' else 'role-investigator' %}
+  <tr>
+    <td>{{ u.username }}</td>
+    <td>{{ u.email or '—' }}</td>
+    <td class="{{ role_class }}">{{ u.role|capitalize }}</td>
+    <td class="mono">{{ u.investigator_id or '—' }}</td>
+    <td>
+      <span class="badge {% if u.is_active_user %}valid{% else %}invalid{% endif %}">
+        {{ 'Active' if u.is_active_user else 'Disabled' }}
+      </span>
+    </td>
+    <td class="mono">
+      {% if u.last_login_at %}
+        {{ u.last_login_at.strftime('%Y-%m-%d %H:%M UTC') }}
+      {% else %}
+        Never
+      {% endif %}
+    </td>
+    <td>
+      <div class="user-actions">
+        <a class="btn-outline" href="{{ url_for('auth.edit_user', user_id=u.id) }}">Edit</a>
+
+        <form method="post" action="{{ url_for('auth.reset_user_password', user_id=u.id) }}">
+          <button class="btn-outline" type="submit" onclick="return confirm('Reset password for {{ u.username }}? A new temporary password will be generated.');">Reset Password</button>
+        </form>
+
+        {% if u.is_active_user %}
+        <form method="post" action="{{ url_for('auth.disable_user', user_id=u.id) }}">
+          <button class="btn-outline" type="submit" onclick="return confirm('Disable {{ u.username }}? They will not be able to sign in.');">Disable</button>
+        </form>
+        {% else %}
+        <form method="post" action="{{ url_for('auth.enable_user', user_id=u.id) }}">
+          <button class="btn" type="submit">Enable</button>
+        </form>
+        {% endif %}
+
+        {% if u.id != current_user.id %}
+        <form method="post" action="{{ url_for('auth.delete_user', user_id=u.id) }}">
+          <button class="btn-danger" type="submit" onclick="return confirm('Permanently delete {{ u.username }}? This cannot be undone.');">Delete</button>
+        </form>
+        {% endif %}
+      </div>
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}
+<p>No users found.</p>
+{% endif %}
+
+<div class="card new-user-card">
+  <h3 style="margin-top:0;">Create account</h3>
+  <form method="post" action="{{ url_for('auth.manage_users') }}">
+    <label for="new_username">Username</label>
+    <input type="text" id="new_username" name="username" required>
+
+    <label for="new_password">Password</label>
+    <input type="password" id="new_password" name="password" required>
+
+    <label for="new_role">Role</label>
+    <select id="new_role" name="role">
+      <option value="investigator">Investigator</option>
+      <option value="admin">Admin</option>
+    </select>
+
+    <button class="btn" type="submit">Create account</button>
+  </form>
+</div>
+{% endblock %}

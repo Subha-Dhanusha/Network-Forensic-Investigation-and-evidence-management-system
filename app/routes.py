@@ -2,6 +2,7 @@ import os
 import uuid
 from flask import (Blueprint, render_template, request, redirect, url_for,
                     flash, current_app, jsonify, send_from_directory)
+from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 
 from .models import db, Case, Evidence, CustodyLog
@@ -17,10 +18,24 @@ def allowed_file(filename):
 
 
 @bp.route("/")
+@login_required
 def index():
     from .models import Evidence, Alert
 
-    cases = Case.query.order_by(Case.created_at.desc()).all()
+    search_query = request.args.get("q", "").strip()
+
+    cases_query = Case.query
+    if search_query:
+        like_pattern = f"%{search_query}%"
+        cases_query = cases_query.filter(
+            db.or_(
+                Case.name.ilike(like_pattern),
+                Case.description.ilike(like_pattern),
+                Case.investigator.ilike(like_pattern),
+                Case.suspect.ilike(like_pattern),
+            )
+        )
+    cases = cases_query.order_by(Case.created_at.desc()).all()
 
     total_evidence = Evidence.query.count()
     total_packets = db.session.query(db.func.sum(Evidence.packet_count)).scalar() or 0
@@ -39,9 +54,11 @@ def index():
         "high_alerts": alert_counts["high"],
     }
 
-    return render_template("index.html", cases=cases, stats=stats)
+    return render_template("index.html", cases=cases, stats=stats, search_query=search_query)
+
 
 @bp.route("/case/new", methods=["GET", "POST"])
+@login_required
 def new_case():
     if request.method == "POST":
         case = Case(
@@ -59,11 +76,14 @@ def new_case():
 
 
 @bp.route("/case/<int:case_id>")
+@login_required
 def view_case(case_id):
     case = Case.query.get_or_404(case_id)
     return render_template("case.html", case=case)
 
+
 @bp.route("/case/<int:case_id>/edit", methods=["GET", "POST"])
+@login_required
 def edit_case(case_id):
     case = Case.query.get_or_404(case_id)
 
@@ -82,6 +102,7 @@ def edit_case(case_id):
 
 
 @bp.route("/case/<int:case_id>/delete", methods=["POST"])
+@login_required
 def delete_case(case_id):
     case = Case.query.get_or_404(case_id)
     name = case.name
@@ -92,6 +113,7 @@ def delete_case(case_id):
 
 
 @bp.route("/evidence/<int:evidence_id>/delete", methods=["POST"])
+@login_required
 def delete_evidence(evidence_id):
     evidence = Evidence.query.get_or_404(evidence_id)
     case_id = evidence.case_id
@@ -113,7 +135,10 @@ def delete_evidence(evidence_id):
     db.session.commit()
     flash(f"Evidence '{filename}' permanently deleted.", "success")
     return redirect(url_for("main.view_case", case_id=case_id))
+
+
 @bp.route("/case/<int:case_id>/upload", methods=["POST"])
+@login_required
 def upload_evidence(case_id):
     case = Case.query.get_or_404(case_id)
 
@@ -163,6 +188,7 @@ def upload_evidence(case_id):
 
 
 @bp.route("/evidence/<int:evidence_id>")
+@login_required
 def view_evidence(evidence_id):
     evidence = Evidence.query.get_or_404(evidence_id)
 
@@ -177,6 +203,7 @@ def view_evidence(evidence_id):
 
 
 @bp.route("/evidence/<int:evidence_id>/custody")
+@login_required
 def view_custody_log(evidence_id):
     evidence = Evidence.query.get_or_404(evidence_id)
     is_valid, broken_at = CustodyLog.verify_chain(evidence.id)
@@ -190,6 +217,7 @@ def view_custody_log(evidence_id):
 
 
 @bp.route("/evidence/<int:evidence_id>/analyze", methods=["POST"])
+@login_required
 def analyze_evidence(evidence_id):
     from .modules.pcap_analyzer import analyze_pcap
 
@@ -223,6 +251,7 @@ def analyze_evidence(evidence_id):
 
 
 @bp.route("/evidence/<int:evidence_id>/detect", methods=["POST"])
+@login_required
 def detect_patterns(evidence_id):
     from .modules.pattern_detector import run_all_detectors
 
@@ -242,7 +271,7 @@ def detect_patterns(evidence_id):
     )
 
     if alerts:
-        flash(f"⚠️ {len(alerts)} suspicious pattern(s) detected.", "error")
+        flash(f"{len(alerts)} suspicious pattern(s) detected.", "error")
     else:
         flash("No suspicious patterns detected.", "success")
 
@@ -250,6 +279,7 @@ def detect_patterns(evidence_id):
 
 
 @bp.route("/evidence/<int:evidence_id>/timeline")
+@login_required
 def view_timeline(evidence_id):
     evidence = Evidence.query.get_or_404(evidence_id)
     sessions = sorted(
@@ -260,6 +290,7 @@ def view_timeline(evidence_id):
 
 
 @bp.route("/evidence/<int:evidence_id>/extract", methods=["POST"])
+@login_required
 def extract_files(evidence_id):
     from .modules.file_extractor import extract_and_persist
 
@@ -288,6 +319,7 @@ def extract_files(evidence_id):
 
 
 @bp.route("/extracted/<int:file_id>/vt_check", methods=["POST"])
+@login_required
 def vt_check_file(file_id):
     from .modules.vt_check import check_extracted_file, VTNotConfigured, VTLookupError
     from .models import ExtractedFile
@@ -318,6 +350,7 @@ def vt_check_file(file_id):
 
 
 @bp.route("/evidence/<int:evidence_id>/ioc")
+@login_required
 def export_iocs(evidence_id):
     from .modules.ioc_export import extract_iocs, format_iocs_as_text
     from flask import Response
@@ -341,12 +374,13 @@ def export_iocs(evidence_id):
 
 
 @bp.route("/evidence/<int:evidence_id>/report")
+@login_required
 def generate_report(evidence_id):
     from .modules.report_generator import generate_report, report_path_for
 
     evidence = Evidence.query.get_or_404(evidence_id)
     output_path = report_path_for(evidence, current_app.config["REPORTS_FOLDER"])
-    generate_report(evidence, output_path)
+    generate_report(evidence, output_path, generated_by=current_user)
 
     CustodyLog.append(
         evidence_id=evidence.id,
@@ -364,6 +398,7 @@ def generate_report(evidence_id):
 
 
 @bp.route("/evidence/<int:evidence_id>/verify")
+@login_required
 def verify_integrity(evidence_id):
     """Recompute the file hash right now and compare to what was recorded at upload."""
     evidence = Evidence.query.get_or_404(evidence_id)

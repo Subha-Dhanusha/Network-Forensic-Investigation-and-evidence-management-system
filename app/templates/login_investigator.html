@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  .login-wrap { max-width: 380px; margin: 60px auto; }
+  .login-wrap .card { padding: 28px; }
+  .login-title { margin: 0 0 4px; }
+  .login-subtitle { color: var(--text-muted); font-size: 13px; margin: 0 0 20px; }
+  .field-group { margin-bottom: 16px; }
+  .field-group label { display: block; font-size: 13px; margin-bottom: 6px; color: var(--text-muted); }
+  .field-group input { width: 100%; padding: 8px 10px; box-sizing: border-box; }
+  .login-actions { display: flex; align-items: center; justify-content: space-between; margin-top: 4px; }
+  .remember-me { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-muted); }
+  .login-submit { width: 100%; margin-top: 20px; }
+  .login-switch { text-align: center; font-size: 13px; margin-top: 16px; color: var(--text-muted); }
+</style>
+<div class="login-wrap">
+  <div class="card">
+    <h2 class="login-title">Investigator sign in</h2>
+    <p class="login-subtitle">Forensics case management</p>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="flash {{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+    <form method="post" action="{{ url_for('auth.login_investigator') }}">
+      <div class="field-group">
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username" autocomplete="username" required autofocus>
+      </div>
+      <div class="field-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" autocomplete="current-password" required>
+      </div>
+      <div class="login-actions">
+        <label class="remember-me">
+          <input type="checkbox" id="remember" name="remember">
+          Remember me
+        </label>
+      </div>
+      <button class="btn login-submit" type="submit">Sign in</button>
+    </form>
+    <p class="login-switch">
+      New investigator? <a href="{{ url_for('auth.register_investigator') }}" style="color:var(--primary-2);">Create an account</a><br>
+      Admin? <a href="{{ url_for('auth.login_admin') }}" style="color:var(--primary-2);">Admin sign in</a>
+    </p>
+  </div>
+</div>
+{% endblock %}

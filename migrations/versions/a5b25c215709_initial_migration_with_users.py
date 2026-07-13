@@ -1,8 +1,8 @@
-"""Initial migration
+"""initial migration with users
 
-Revision ID: dbbf23d6d051
+Revision ID: a5b25c215709
 Revises: 
-Create Date: 2026-07-08 00:00:25.756739
+Create Date: 2026-07-13 13:45:29.236153
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'dbbf23d6d051'
+revision = 'a5b25c215709'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -28,6 +28,21 @@ def upgrade():
     sa.Column('suspect', sa.Text(), nullable=True),
     sa.Column('affected_party', sa.Text(), nullable=True),
     sa.PrimaryKeyConstraint('id')
+    )
+    op.create_table('users',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('username', sa.String(length=80), nullable=False),
+    sa.Column('email', sa.String(length=120), nullable=True),
+    sa.Column('password_hash', sa.String(length=255), nullable=False),
+    sa.Column('role', sa.String(length=20), nullable=False),
+    sa.Column('investigator_id', sa.String(length=20), nullable=True),
+    sa.Column('is_active_user', sa.Boolean(), server_default='1', nullable=False),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.Column('last_login_at', sa.DateTime(), nullable=True),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('email'),
+    sa.UniqueConstraint('investigator_id'),
+    sa.UniqueConstraint('username')
     )
     op.create_table('evidence',
     sa.Column('id', sa.Integer(), nullable=False),
@@ -122,5 +137,6 @@ def downgrade():
     op.drop_table('sessions')
     op.drop_table('custody_logs')
     op.drop_table('evidence')
+    op.drop_table('users')
     op.drop_table('cases')
     # ### end Alembic commands ###

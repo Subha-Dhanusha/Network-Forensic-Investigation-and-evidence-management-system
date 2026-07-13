@@ -1,7 +1,13 @@
 import os
+from dotenv import load_dotenv
 from flask import Flask
+from flask_login import LoginManager
 from flask_migrate import Migrate
 from .models import db
+
+load_dotenv()
+
+login_manager = LoginManager()
 
 
 def create_app(test_config=None):
@@ -19,6 +25,7 @@ def create_app(test_config=None):
 
     app.config.from_mapping(
         SECRET_KEY=os.environ.get("SECRET_KEY", "dev-change-me"),
+        ADMIN_INVITE_CODE=os.environ.get("ADMIN_INVITE_CODE", "1646"),
         SQLALCHEMY_DATABASE_URI=database_url or f"sqlite:///{os.path.join(instance_dir, 'nfies.db')}",
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
         UPLOAD_FOLDER=os.path.join(base_dir, "app", "uploads"),
@@ -35,9 +42,22 @@ def create_app(test_config=None):
         os.makedirs(app.config[folder_key], exist_ok=True)
 
     db.init_app(app)
-    Migrate(app, db)
+    Migrate(app, db, render_as_batch=True)
+
+    login_manager.init_app(app)
+    login_manager.login_view = "auth.login_investigator"
+    login_manager.login_message_category = "error"
+
+    from .models import User
+
+    @login_manager.user_loader
+    def load_user(user_id):
+        return User.query.get(int(user_id))
 
     from . import routes
     app.register_blueprint(routes.bp)
+
+    from .auth import bp as auth_bp
+    app.register_blueprint(auth_bp)
 
     return app

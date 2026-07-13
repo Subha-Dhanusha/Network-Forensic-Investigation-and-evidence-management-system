@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="login-wrap" style="max-width:420px; margin:60px auto;">
+  <div class="card" style="padding:28px;">
+    <h2 style="margin:0 0 4px;">Edit {{ user.username }}</h2>
+    <p style="color:var(--text-muted); font-size:13px; margin:0 0 20px;">
+      {{ user.role|capitalize }}{% if user.investigator_id %} — {{ user.investigator_id }}{% endif %}
+    </p>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="flash {{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <form method="post" action="{{ url_for('auth.edit_user', user_id=user.id) }}">
+      <label for="role">Role</label>
+      <select id="role" name="role">
+        <option value="investigator" {% if user.role == 'investigator' %}selected{% endif %}>Investigator</option>
+        <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>Admin</option>
+      </select>
+
+      <label for="password">New password (leave blank to keep current)</label>
+      <input type="password" id="password" name="password">
+
+      <button class="btn" type="submit" style="width:100%; margin-top:8px;">Save changes</button>
+    </form>
+
+    <p style="text-align:center; font-size:13px; margin-top:16px;">
+      <a href="{{ url_for('auth.manage_users') }}" style="color:var(--primary-2);">Back to user list</a>
+    </p>
+  </div>
+</div>
+{% endblock %}

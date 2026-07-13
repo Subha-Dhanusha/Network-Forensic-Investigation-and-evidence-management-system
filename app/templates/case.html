@@ -13,9 +13,15 @@
 <p>{{ case.description }}</p>
 <p class="mono">Suspect(s): {{ case.suspect or 'unknown' }}</p>
 <p class="mono">Affected Party: {{ case.affected_party or 'not specified' }}</p>
-
+<p class="mono">Incident Type: {{ case.incident_type.replace('_', ' ')|title if case.incident_type else 'Not specified' }}</p>
+<p class="mono">Total Evidence Files: {{ case.evidence_items|length }}</p>
 <div class="card">
-  <h3 style="margin-top:0;">Upload PCAP Evidence</h3>
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+    <h3 style="margin:0;">Upload PCAP Evidence</h3>
+    <span class="badge {% if case.evidence_items|length > 0 %}valid{% else %}pending{% endif %}">
+      {{ case.evidence_items|length }} file{{ '' if case.evidence_items|length == 1 else 's' }} uploaded
+    </span>
+  </div>
   <form method="post" action="{{ url_for('main.upload_evidence', case_id=case.id) }}" enctype="multipart/form-data">
     <label>PCAP File (.pcap, .pcapng, .cap)</label>
     <input type="file" name="pcap_file" accept=".pcap,.pcapng,.cap" required>

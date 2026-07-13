@@ -21,7 +21,27 @@
   </div>
 </div>
 
-<h3>Cases</h3>
+<div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin:32px 0 12px; flex-wrap:wrap;">
+  <h3 style="margin:0;">Cases</h3>
+  <form method="get" action="{{ url_for('main.index') }}" style="display:flex; gap:8px; align-items:center;">
+    <input
+      type="text"
+      name="q"
+      value="{{ search_query }}"
+      placeholder="Search by name, investigator, suspect..."
+      style="margin:0; width:280px;"
+    >
+    <button class="btn-outline" type="submit">Search</button>
+    {% if search_query %}
+      <a href="{{ url_for('main.index') }}" class="btn-outline" style="text-decoration:none;">Clear</a>
+    {% endif %}
+  </form>
+</div>
+
+{% if search_query %}
+  <p class="mono" style="margin:0 0 12px;">{{ cases|length }} result(s) for "{{ search_query }}"</p>
+{% endif %}
+
 {% for case in cases %}
   <div class="card">
     <div style="display:flex; justify-content:space-between; align-items:flex-start;">
@@ -38,7 +58,13 @@
   </div>
 {% else %}
   <div class="card">
-    <p style="color:var(--text-muted); margin:0;">No cases yet. Click "+ New Case" above to start your first investigation.</p>
+    <p style="color:var(--text-muted); margin:0;">
+      {% if search_query %}
+        No cases match "{{ search_query }}".
+      {% else %}
+        No cases yet. Click "+ New Case" above to start your first investigation.
+      {% endif %}
+    </p>
   </div>
 {% endfor %}
 {% endblock %}

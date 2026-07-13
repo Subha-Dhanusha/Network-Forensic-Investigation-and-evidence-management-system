@@ -7,6 +7,15 @@
     <input name="name" required value="{{ case.name }}">
     <label>Description</label>
     <textarea name="description" rows="3">{{ case.description or '' }}</textarea>
+    <label>Incident Type</label>
+    <select name="incident_type">
+      <option value="phishing" {% if case.incident_type == 'phishing' %}selected{% endif %}>Phishing</option>
+      <option value="malware_c2" {% if case.incident_type == 'malware_c2' %}selected{% endif %}>Malware / C2</option>
+      <option value="data_breach" {% if case.incident_type == 'data_breach' %}selected{% endif %}>Data Breach / Exfiltration</option>
+      <option value="unauthorized_access" {% if case.incident_type == 'unauthorized_access' %}selected{% endif %}>Unauthorized Access</option>
+      <option value="dos" {% if case.incident_type == 'dos' %}selected{% endif %}>Denial of Service</option>
+      <option value="other" {% if case.incident_type == 'other' %}selected{% endif %}>Other</option>
+    </select>
     <label>Lead Investigator</label>
     <input name="investigator" value="{{ case.investigator or '' }}">
     <label>Suspect(s)</label>
